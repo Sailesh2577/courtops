@@ -23,6 +23,7 @@ import {
   Trophy,
   Sun,
   Moon,
+  Circle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -49,6 +50,7 @@ export type IconName =
   | "trophy"
   | "sun"
   | "moon"
+  | "dot"
   | "shuttle";
 
 const MAP: Record<Exclude<IconName, "shuttle">, LucideIcon> = {
@@ -74,6 +76,7 @@ const MAP: Record<Exclude<IconName, "shuttle">, LucideIcon> = {
   trophy: Trophy,
   sun: Sun,
   moon: Moon,
+  dot: Circle,
 };
 
 type IconProps = {

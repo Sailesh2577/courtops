@@ -4,18 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 import { Avatar } from "./ui";
+import { useStore } from "@/lib/store";
+import { EVENT } from "@/lib/data";
 
 type NavItem = {
   label: string;
   href: string;
   icon: IconName;
-  badge?: number; // open-flag count (static placeholder until the store lands)
-  dot?: boolean; // unresolved Court-1 delay ping
+  badge?: boolean; // shows the live open-flag count
+  dot?: boolean; // shows the Court-1 delay ping while it is unresolved
 };
 
 // Order & icons per the design handoff (02-components.md §Sidebar).
 const NAV: NavItem[] = [
-  { label: "Needs you", href: "/needs-you", icon: "flag", badge: 3 },
+  { label: "Needs you", href: "/needs-you", icon: "flag", badge: true },
   { label: "Court board", href: "/board", icon: "grid" },
   { label: "Schedule", href: "/schedule", icon: "calendar" },
   { label: "Reschedule", href: "/reschedule", icon: "refresh", dot: true },
@@ -30,6 +32,9 @@ export function Sidebar({
   onToggleTheme: () => void;
 }) {
   const pathname = usePathname();
+  const flags = useStore((s) => s.flags);
+  const openCount = flags.filter((f) => !f.resolved).length;
+  const delayActive = !flags.find((f) => f.id === "f2")?.resolved;
 
   return (
     <aside className="side">
@@ -52,8 +57,10 @@ export function Sidebar({
             >
               <Icon name={n.icon} size={19} />
               <span className="nav-label">{n.label}</span>
-              {n.badge ? <span className="nav-badge">{n.badge}</span> : null}
-              {n.dot ? <span className="nav-dot" /> : null}
+              {n.badge && openCount > 0 ? (
+                <span className="nav-badge">{openCount}</span>
+              ) : null}
+              {n.dot && delayActive ? <span className="nav-dot" /> : null}
             </Link>
           );
         })}
@@ -70,8 +77,8 @@ export function Sidebar({
         </button>
 
         <div className="event-card">
-          <div className="event-card-name">Nebraska Open</div>
-          <div className="event-card-meta">Sat · Badminton · 9 courts</div>
+          <div className="event-card-name">{EVENT.name}</div>
+          <div className="event-card-meta">Sat · Badminton · {EVENT.courts} courts</div>
         </div>
 
         <div className="org">

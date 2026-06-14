@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Toasts } from "./Toasts";
+import { useStore } from "@/lib/store";
 
 type Theme = "light" | "dark";
 
@@ -15,6 +16,14 @@ type Theme = "light" | "dark";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
   const pathname = usePathname();
+  const tick = useStore((s) => s.tick);
+
+  // Advance the elapsed timers on every live match once a second. One interval
+  // for the whole app; the board and player view read the result from the store.
+  useEffect(() => {
+    const iv = setInterval(tick, 1000);
+    return () => clearInterval(iv);
+  }, [tick]);
 
   useEffect(() => {
     // Sync React state with the theme the inline script may have set on <html>

@@ -4,7 +4,7 @@ A living log of what this project is, the decisions we have made, and where we
 are. Update this whenever something meaningful changes so a new chat can read it
 and pick up quickly. CLAUDE.md points here.
 
-Last updated: 2026-06-14
+Last updated: 2026-06-14 (Phase 1 complete)
 
 ## What CourtOps is
 
@@ -55,18 +55,37 @@ moment that shows "one action, everything updates."
 - Phase 0 — DONE: themed app shell, design tokens, fonts, sidebar with 5-route
   nav, working light/dark toggle, base primitives. Verified with build,
   typecheck, lint. (Vercel deploy is the last Phase 0 step.)
-- Phase 1 — NEXT: recreate the full prototype on local state. Port the reducer
-  store + seed data, build the 5 screens (Court board, Needs you, Player,
-  Schedule, Reschedule), wire the signature Court 3 flow. This is the
-  portfolio-ready, demoable checkpoint.
-- Phase 2+ — Supabase wiring.
-- Phase 3+ — Gemini message drafting.
+- Phase 1 — DONE: full prototype recreated on local state. The reducer store
+  was ported to a Zustand store, seed data lives in lib/data.ts (extended to 9
+  courts), and all 5 screens are real (Court board, Needs you, Player, Schedule,
+  Reschedule). The signature Court 3 flow works: resolving flag f1 sends Aanya
+  to Court 3 and the board plus the player phone update off the same store.
+  Verified with build, typecheck, and lint.
+- Phase 2+ — NEXT: Supabase wiring. Swap the store's data source from the local
+  seed to Supabase (Postgres + Realtime + RLS) so the organizer dashboard and
+  the player phone sync across two real devices. Add Auth so organizers and
+  players see different surfaces.
+- Phase 3+ — Gemini message drafting, server-side only.
 
 ## Routes
 
 `/` redirects to `/needs-you`. Screens: `/needs-you` (home), `/board`,
-`/schedule`, `/reschedule`, `/player`. All but the gallery on /needs-you are
-placeholders until Phase 1.
+`/schedule`, `/reschedule`, `/player`. All five are now real and live off the
+shared store.
+
+## Where the code lives (Phase 1)
+
+- `lib/data.ts` — types, helpers (clock, mmss), and the seed tournament
+  (matches, courts, flags, schedule blocks, the player, event metadata). One
+  place to edit the demo state.
+- `lib/store.ts` — the Zustand store. Holds the whole tournament and exposes
+  `tick`, `resolveFlag`, `pushToast`, `dismissToast`. Resolving a flag applies
+  its effect to matches/courts/blocks so every screen updates at once. This is
+  the seam Supabase plugs into in Phase 2.
+- `components/{Board,Flags,Player,Schedule,Reschedule}View.tsx` — the five
+  screens as client components. The route `page.tsx` files just render them.
+- `components/AppShell.tsx` — owns the once-a-second tick interval and theme.
+- `components/{ui,Icon,Sidebar,Toasts}.tsx` — shared primitives and chrome.
 
 ## Working conventions
 
@@ -78,4 +97,9 @@ placeholders until Phase 1.
 ## Status log
 
 - 2026-06-14: Phase 0 scaffolded and verified. Personalized to Nebraska Open / 9
-  courts. Set up PROGRESS.md and Vercel deploy.
+  courts. Set up PROGRESS.md.
+- 2026-06-14: Deployed to Vercel and live at
+  https://courtops-mu.vercel.app/needs-you. Phase 0 complete.
+- 2026-06-14: Phase 1 complete. Ported the store and seed data, built all 5
+  screens, wired the signature Court 3 flow, and extended the board to 9 courts.
+  Removed the Phase 0 primitives gallery. Build, typecheck, and lint all clean.

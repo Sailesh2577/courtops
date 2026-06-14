@@ -32,6 +32,8 @@ npm run dev      # http://localhost:3000
 
 Other scripts: `npm run build`, `npm run start`, `npm run lint`.
 
+Live demo: https://courtops-mu.vercel.app/needs-you
+
 ## Project status — Phase 0 ✅
 
 The themed app shell is in place: sidebar with the five-route nav, a working

@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { useToasts } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { Icon } from "./Icon";
 
 // Bottom-right toast stack. Auto-dismisses the latest toast after 4200ms
 // (per the design handoff).
 export function Toasts() {
-  const toasts = useToasts((s) => s.toasts);
-  const dismissToast = useToasts((s) => s.dismissToast);
+  const toasts = useStore((s) => s.toasts);
+  const dismissToast = useStore((s) => s.dismissToast);
 
   useEffect(() => {
     if (!toasts.length) return;
