@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Toasts } from "./Toasts";
+import { CommandBar } from "./CommandBar";
 import { useStore } from "@/lib/store";
 import { isPublicRoute } from "@/lib/auth";
 
@@ -95,6 +96,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+      <CommandBar />
       <Toasts />
     </div>
   );

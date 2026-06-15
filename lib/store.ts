@@ -9,6 +9,7 @@ import {
   type Toast,
 } from "./data";
 import { supabase } from "./supabaseClient";
+import type { CopilotPlan } from "./copilot";
 import type { User } from "@supabase/supabase-js";
 import {
   rowToMatch,
@@ -44,6 +45,7 @@ type CourtOpsStore = CourtOpsState & {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   resolveFlag: (id: string, opts?: ResolveOpts) => void;
+  applyPlan: (plan: CopilotPlan) => Promise<void>;
   pushToast: (t: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
   openCount: () => number;
@@ -262,6 +264,78 @@ export const useStore = create<CourtOpsStore>((set, get) => ({
     });
   },
 
+  // Apply a copilot plan the organizer approved. Walks the steps onto local
+  // copies of the state (reusing the same applyEffect the flag flow uses), sets
+  // it all at once for a snappy update, then persists every touched row so
+  // Realtime broadcasts the change. The copilot never writes on its own; this
+  // only runs after a human clicks Approve.
+  applyPlan: async (plan) => {
+    const s = get();
+    let matches = { ...s.matches };
+    let courts = s.courts;
+    let blocks = s.blocks;
+    let flags = s.flags;
+
+    const matchIds = new Set<string>();
+    const courtIds = new Set<string>();
+    const blockIds = new Set<string>();
+    const flagIds = new Set<string>();
+    const sentTo: string[] = [];
+
+    for (const step of plan.steps) {
+      if (step.kind === "assign_court") {
+        const r = applyEffect(
+          { ...s, matches, courts, blocks },
+          { kind: "assign_court", matchId: step.matchId, courtId: step.courtId }
+        );
+        matches = r.matches;
+        courts = r.courts;
+        matchIds.add(step.matchId);
+        courtIds.add(step.courtId);
+      } else if (step.kind === "move_block") {
+        const r = applyEffect(
+          { ...s, matches, courts, blocks },
+          { kind: "move_block", blockId: step.blockId, toSlot: step.toSlot }
+        );
+        blocks = r.blocks;
+        blockIds.add(step.blockId);
+      } else if (step.kind === "resolve_flag") {
+        flags = flags.map((f) =>
+          f.id === step.flagId ? { ...f, resolved: true, method: "auto" } : f
+        );
+        flagIds.add(step.flagId);
+      } else if (step.kind === "send_message") {
+        sentTo.push(step.to);
+      }
+    }
+
+    const toasts: Toast[] = [
+      { id: nextToastId(), title: "Plan applied", body: plan.summary },
+    ];
+    if (sentTo.length) {
+      toasts.push({
+        id: nextToastId(),
+        title: "Message sent",
+        body: `Sent to ${sentTo.join(", ")}.`,
+      });
+    }
+
+    // Optimistic local update.
+    set({ matches, courts, blocks, flags, toasts: [...s.toasts, ...toasts] });
+
+    // Persist the rows the plan touched (fire and forget; Realtime syncs others).
+    await persistChanges(
+      { matches, courts, blocks },
+      {
+        matchIds: [...matchIds],
+        courtIds: [...courtIds],
+        blockIds: [...blockIds],
+        flagIds: [...flagIds],
+      },
+      { summary: plan.summary, steps: plan.steps }
+    );
+  },
+
   pushToast: (t) =>
     set((s) => ({ toasts: [...s.toasts, { ...t, id: nextToastId() }] })),
 
@@ -338,6 +412,70 @@ async function persist(
     console.warn(
       "Write was blocked by row level security (no organizer session). Sign in as the organizer to make changes."
     );
+    useStore.getState().pushToast({
+      title: "Change didn't sync",
+      body: "You're signed out. Sign in as the organizer so changes persist.",
+    });
+  }
+}
+
+// Write an arbitrary set of touched rows (used by the copilot, which can touch
+// several matches/courts/blocks/flags in one approved plan). Mirrors persist()
+// but takes explicit id lists instead of deriving them from a single effect.
+async function persistChanges(
+  next: { matches: Record<string, Match>; courts: Court[]; blocks: Block[] },
+  touched: {
+    matchIds: string[];
+    courtIds: string[];
+    blockIds: string[];
+    flagIds: string[];
+  },
+  activityDetail: unknown
+) {
+  type Res = { error: unknown; data: unknown[] | null };
+  const updates: PromiseLike<Res>[] = [];
+
+  for (const id of touched.matchIds) {
+    const m = next.matches[id];
+    if (m) updates.push(supabase.from("matches").update(matchToRow(m)).eq("id", id).select());
+  }
+  for (const id of touched.courtIds) {
+    const idx = next.courts.findIndex((c) => c.id === id);
+    const c = next.courts[idx];
+    if (c) updates.push(supabase.from("courts").update(courtToRow(c, idx)).eq("id", id).select());
+  }
+  for (const id of touched.blockIds) {
+    const b = next.blocks.find((x) => x.id === id);
+    if (b) updates.push(supabase.from("blocks").update(blockToRow(b)).eq("id", id).select());
+  }
+  for (const id of touched.flagIds) {
+    updates.push(
+      supabase
+        .from("flags")
+        .update({ resolved: true, method: "auto" })
+        .eq("id", id)
+        .select()
+    );
+  }
+
+  if (updates.length === 0) return; // a message-only plan changes no rows
+
+  const results = await Promise.all(updates);
+  let blocked = false;
+  for (const r of results) {
+    if (r.error) console.warn("Supabase write failed:", r.error);
+    else if (!r.data || r.data.length === 0) blocked = true;
+  }
+
+  const act = await supabase.from("activity").insert({
+    kind: "copilot_plan",
+    method: "auto",
+    detail: activityDetail,
+  });
+  if (act.error) console.warn("Activity log failed:", act.error);
+
+  if (blocked) {
+    console.warn("Copilot write blocked by RLS (no organizer session).");
     useStore.getState().pushToast({
       title: "Change didn't sync",
       body: "You're signed out. Sign in as the organizer so changes persist.",

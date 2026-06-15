@@ -4,7 +4,7 @@ A living log of what this project is, the decisions we have made, and where we
 are. Update this whenever something meaningful changes so a new chat can read it
 and pick up quickly. CLAUDE.md points here.
 
-Last updated: 2026-06-15 (Phase 2 done: organizer login + role separation)
+Last updated: 2026-06-15 (Phase 3a done: operator copilot, real Gemini)
 
 ## What CourtOps is
 
@@ -72,9 +72,21 @@ moment that shows "one action, everything updates."
   Organizer surfaces are gated client-side (redirect to /login); /player and
   /login are public. Still optional: add the env vars to Vercel so the live
   site syncs (the 3 Supabase vars; the demo org vars are optional overrides).
-- Phase 3+ — AI: operator copilot (natural-language command bar that proposes
-  a plan a person approves) + predictive delay radar. Gemini, server-side only.
-  Player message drafting folds into the copilot.
+- Phase 3a — DONE: the operator copilot. A global Cmd/Ctrl-K command bar
+  (organizer surfaces only) takes a plain-language request, posts it plus a
+  compact snapshot of the live store to /api/copilot, and Gemini returns a
+  structured Plan (summary + typed steps). The plan is shown for approval;
+  nothing changes until the organizer clicks Approve, which hands it to the
+  store's applyPlan (reuses the same applyEffect + persist path as resolving a
+  flag, so Realtime syncs the player phone too). Step kinds: assign_court,
+  move_block, resolve_flag, send_message (player-message drafting folds in
+  here). The server validates every step's ids against the snapshot and never
+  writes anything itself. Real Gemini, server-side only (GEMINI_API_KEY, no
+  NEXT_PUBLIC). Verified end to end against the live API. Build, typecheck, lint
+  clean.
+- Phase 3b — NEXT: predictive delay radar (which live matches are running over
+  plan and what they push downstream). The seed already supports it (m1 is 16
+  min over plan; the delayActive/f2 hook exists).
 
 ## Routes
 
@@ -92,9 +104,24 @@ shared store.
   `resolveFlag` updates locally for snappiness, then `persist()` writes the
   changed rows so Realtime broadcasts them. The per-second `tick` stays local
   and is never written, so there is no write storm and demo numbers stay stable.
+  `applyPlan` applies an approved copilot plan: it walks the typed steps onto
+  local state (reusing applyEffect), sets it at once, then persists every
+  touched row via the generic `persistChanges` writer.
 - `lib/auth.ts` — auth config: the demo organizer credentials (DEMO_ORG, from
   NEXT_PUBLIC env with demo fallbacks) and the public-route list used by the
   AppShell gate.
+- `lib/copilot.ts` — the copilot's shared contract (browser + server): the
+  CopilotAction/CopilotPlan types, makeSnapshot (compress the store into an
+  id-bearing snapshot for the model), and validatePlan (drop steps that
+  reference unknown ids). No server- or browser-only imports.
+- `app/api/copilot/route.ts` — the copilot's brain (server-only POST handler).
+  Calls Gemini with a strict anyOf responseSchema (one branch per action kind,
+  thinking disabled), parses + validates the plan, returns it. Holds
+  GEMINI_API_KEY; model defaults to gemini-2.5-flash (overridable via
+  GEMINI_MODEL). Proposes only; never writes.
+- `components/CommandBar.tsx` — the global Cmd/Ctrl-K command bar. Posts the
+  request + snapshot, shows the proposed plan, and on Approve calls the store's
+  applyPlan. Mounted in AppShell inside the organizer shell only.
 - `app/login/page.tsx` — the organizer sign-in screen (email + password,
   pre-filled demo creds). Renders standalone, no sidebar.
 - `scripts/seed-organizer.ts` — creates/resets the demo organizer auth account
@@ -110,8 +137,9 @@ shared store.
 - `components/{Board,Flags,Player,Schedule,Reschedule}View.tsx` — the five
   screens as client components. The route `page.tsx` files just render them.
 - `components/AppShell.tsx` — owns the once-a-second tick interval, the theme,
-  calls `init()` once on mount, and gates organizer routes (redirects signed-out
-  visitors to /login; lets /player and /login through).
+  calls `init()` once on mount, gates organizer routes (redirects signed-out
+  visitors to /login; lets /player and /login through), and mounts the global
+  CommandBar inside the organizer shell.
 - `components/{ui,Icon,Sidebar,Toasts}.tsx` — shared primitives and chrome.
 
 ## Supabase / environment
@@ -132,8 +160,15 @@ shared store.
   DEMO_ORG). The login page (/login) pre-fills the demo credentials so the live
   link works in one click. Defaults: sailesh@courtops.demo / courtops-demo,
   overridable via NEXT_PUBLIC_DEMO_ORG_* env vars.
-- For the live Vercel site to work, the 3 env vars must be added in Vercel
-  Project Settings -> Environment Variables.
+- For the live Vercel site to work, the 3 Supabase env vars must be added in
+  Vercel Project Settings -> Environment Variables (done). The copilot also
+  needs GEMINI_API_KEY there for the live site; the running site only ever uses
+  the 2 NEXT_PUBLIC Supabase vars plus GEMINI_API_KEY (the service-role key is
+  local seed-script only).
+- Copilot env: GEMINI_API_KEY (server-only, no NEXT_PUBLIC) powers /api/copilot.
+  GEMINI_MODEL is optional and defaults to gemini-2.5-flash. Note: this key
+  returned `limit: 0` for gemini-2.0-flash (not enabled on its tier), so we use
+  2.5-flash, which works. Free-tier RPM is low; rapid calls can rate-limit.
 
 ## Working conventions
 
@@ -200,3 +235,16 @@ shared store.
   Updated schema.sql comments and .env.local.example; with real login,
   Anonymous sign-ins should now be DISABLED in Supabase. Players read as anon
   (unchanged); only the organizer can write. Build, typecheck, lint all clean.
+- 2026-06-15: Phase 3a — operator copilot. Built lib/copilot.ts (shared
+  Plan/Action types, makeSnapshot, validatePlan), app/api/copilot/route.ts (the
+  server-only Gemini call), the store's applyPlan + persistChanges, and the
+  global Cmd/Ctrl-K CommandBar mounted in AppShell. The copilot proposes a typed
+  plan from a plain-language request; the organizer approves; applyPlan mutates
+  + persists so the player phone syncs. Wired real Gemini (key chosen over a
+  fallback planner). Two fixes during the live test: switched the default model
+  to gemini-2.5-flash (the key reports limit:0 for 2.0-flash), and switched the
+  responseSchema to an anyOf with per-kind required fields plus thinking
+  disabled, because the single-shape optional-field schema let the model leave
+  courtId / message body blank (those steps were getting dropped). Verified end
+  to end against the live API: "Court 5 is open, who goes on?" returns assign +
+  notify steps with all fields populated. Build, typecheck, lint clean.
