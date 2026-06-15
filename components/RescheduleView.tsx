@@ -6,9 +6,8 @@
 // the "Needs you" row. Ported from the design handoff's reschedule.jsx.
 import { useState } from "react";
 import { Icon } from "./Icon";
-import { AIChip, Button, ViewHead } from "./ui";
 import { useStore } from "@/lib/store";
-import { clock } from "@/lib/data";
+import { clockShort } from "@/lib/data";
 
 type Slot = { t: string; c: string };
 type Move = {
@@ -106,11 +105,21 @@ export function RescheduleView() {
 
   return (
     <div className="view view-reschedule">
-      <ViewHead
-        title="Reschedule"
-        sub="When the day drifts from the plan, CourtOps replans the rest and you confirm."
-        right={<span className="head-clock">{clock(nowMin)}</span>}
-      />
+      <div className="nf-band">
+        <h1 className="nf-title">Reschedule</h1>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Moves</span>
+          <span className="nf-stat-v">{MOVES.length}</span>
+        </div>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Players</span>
+          <span className="nf-stat-v">4</span>
+        </div>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Local time</span>
+          <span className="nf-stat-v">{clockShort(nowMin)}</span>
+        </div>
+      </div>
 
       <div className={"rs-trigger" + (applied ? " rs-trigger-done" : "")}>
         <span className="rs-trigger-ic">
@@ -138,7 +147,10 @@ export function RescheduleView() {
       <div className="rs-wrap">
         <div className="rs-plan">
           <div className="rs-plan-head">
-            <AIChip tone="accent">{applied ? "Plan applied" : "Proposed plan"}</AIChip>
+            <span className="rs-plan-h-l">
+              <span className="sw-ai">AI</span>
+              {applied ? "Plan applied" : "Proposed plan"}
+            </span>
             <span className="rs-plan-sub">{MOVES.length} matches rearranged</span>
           </div>
           <div className="rs-rows">
@@ -195,17 +207,19 @@ export function RescheduleView() {
 
           {!applied ? (
             <div className="rs-card rs-card-msg">
-              <AIChip>One message covers all 4</AIChip>
+              <div className="rs-msg-head">
+                <span className="sw-ai">AI</span>
+                One message covers all 4
+              </div>
               <p className="rs-msg-body">{flag.message.body}</p>
-              <Button
-                variant="primary"
-                icon={applying ? undefined : "refresh"}
+              <button
+                className="sw-btn sw-full"
                 onClick={apply}
                 disabled={applying}
-                full
               >
+                {!applying && <Icon name="refresh" size={15} />}
                 {applying ? "Applying…" : "Apply reshuffle & notify"}
-              </Button>
+              </button>
               <button className="rs-override">Adjust manually instead</button>
             </div>
           ) : (

@@ -4,7 +4,7 @@ A living log of what this project is, the decisions we have made, and where we
 are. Update this whenever something meaningful changes so a new chat can read it
 and pick up quickly. CLAUDE.md points here.
 
-Last updated: 2026-06-14 (Phase 2 sync working)
+Last updated: 2026-06-15 (UI redesign: Board + Needs You done)
 
 ## What CourtOps is
 
@@ -136,3 +136,35 @@ shared store.
   through Supabase. Confirmed the Court 3 flow syncs live from the organizer
   board to a separate player phone session. Decided the Phase 3 AI direction:
   operator copilot + delay radar.
+- 2026-06-15: UI redesign to escape the "AI generated" look. Chose one system,
+  two idioms: "Map for space, Grid for sequence." Unified to a single typeface
+  (Hanken Grotesk, tabular figures; dropped JetBrains Mono). Board rebuilt as a
+  Floor Plan venue map (`.fp-*`, BoardView.tsx) and approved. Needs You rebuilt
+  in the Swiss/International grid (`.nf-*` replacing old `.fl-*`/`.msg-*`,
+  FlagsView.tsx): stat-band masthead, numbered ranked index, hairline rules,
+  hard-edged severity tags, spec-sheet detail pane that keeps the AI
+  drafted-message flow. Green = action, red = severity, live stays blue. Build,
+  typecheck, lint clean. Throwaway HTML mockups live in `prototypes/`
+  (untracked).
+- 2026-06-15: Redesign finished across all 5 screens. Schedule and Reschedule
+  rebuilt in the same Swiss grid idiom as Needs You: both reuse the `.nf-band`
+  stat-band masthead and shared hard-edged controls (`.sw-btn`, `.sw-btn-ghost`,
+  `.sw-btn-soft`, `.sw-ai`). Schedule grid is square + hairline + tabular, with
+  the Rohan conflict and its popover in red (urgency). Reschedule trigger is a
+  red-left-rule strip with a tabular metric; plan rows are ruled; side cards are
+  square. Player kept as the phone (calmer distillation of the system) and
+  refined: court numeral 80px tabular green with a `courtPop` scale-in on
+  arrival plus the existing card flash. Added the animation set: floor-plan
+  court-assign flash, Needs You row stagger + handled pop, schedule regenerate
+  restagger, reschedule apply cascade, player arrival pop. ViewHead/AIChip/
+  Button/Severity in components/ui.tsx are now unused (every screen has bespoke
+  chrome) and can be removed later. Build, typecheck, lint all clean.
+- 2026-06-15: Redesign polish + cleanup. Fixed a dark-mode bug where button
+  text was invisible: the global `button` rule never set `color`, so button
+  labels (including the Needs You flag rows, which are buttons) fell back to the
+  UA default ink and vanished on the dark canvas. Added `color: inherit` to the
+  base button rule. Also bumped the low-severity tag text from `--ink-3` to
+  `--ink-2` for legibility in dark. Removed the now-unused ViewHead, AIChip,
+  Button, and Severity from components/ui.tsx (kept Avatar, Stat, Pill,
+  StatusDot, STATUS, initials, StatusKey, which are still referenced). Build,
+  typecheck, lint all clean.

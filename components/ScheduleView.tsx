@@ -7,7 +7,6 @@
 // court count.
 import { useState } from "react";
 import { Icon } from "./Icon";
-import { Button, AIChip, ViewHead } from "./ui";
 import { useStore } from "@/lib/store";
 import { SLOTS, SLOT_START, clockShort, type Block } from "@/lib/data";
 
@@ -100,46 +99,49 @@ export function ScheduleView() {
 
   return (
     <div className="view view-schedule">
-      <ViewHead
-        title="Schedule builder"
-        sub={`Imported draw · ${blocks.length} matches placed across ${n} courts`}
-        right={
-          <>
-            <div className="sb-idle">
-              <div className="sb-idle-row">
-                <span className="sb-idle-before">{estIdle.before}m</span>
-                <Icon name="arrow" size={14} />
-                <span className="sb-idle-after">{idleAfter}m</span>
-              </div>
-              <span className="sb-idle-l">
-                avg player idle · <b>↓{drop}%</b>
-              </span>
-            </div>
-            <Button variant="soft" icon="refresh" onClick={regenerate}>
-              Regenerate
-            </Button>
-          </>
-        }
-      />
-
-      <div className="sb-legend">
-        {(
-          [
-            ["done", "Played"],
-            ["live", "Live"],
-            ["ready", "Ready"],
-            ["planned", "Planned"],
-          ] as const
-        ).map(([k, l]) => (
-          <span key={k} className="sb-leg">
-            <span className={"sb-leg-d sb-" + k} />
-            {l}
+      <div className="nf-band">
+        <h1 className="nf-title">Schedule builder</h1>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Matches</span>
+          <span className="nf-stat-v">{blocks.length}</span>
+        </div>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Courts</span>
+          <span className="nf-stat-v">{n}</span>
+        </div>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Avg player idle</span>
+          <span className="nf-stat-v accent">{idleAfter}m</span>
+          <span className="nf-stat-sub">
+            from {estIdle.before}m · <b>↓{drop}%</b>
           </span>
-        ))}
-        <span className="sb-leg sb-leg-hl">
-          <span className="sb-leg-d sb-leg-acc" />
-          Conflict
-        </span>
+        </div>
+      </div>
+
+      <div className="sb-toolbar">
+        <div className="sb-legend">
+          {(
+            [
+              ["done", "Played"],
+              ["live", "Live"],
+              ["ready", "Ready"],
+              ["planned", "Planned"],
+            ] as const
+          ).map(([k, l]) => (
+            <span key={k} className="sb-leg">
+              <span className={"sb-leg-d sb-" + k} />
+              {l}
+            </span>
+          ))}
+          <span className="sb-leg">
+            <span className="sb-leg-d sb-leg-acc" />
+            Conflict
+          </span>
+        </div>
+        <button className="sw-btn-soft" onClick={regenerate}>
+          <Icon name="refresh" size={14} />
+          Regenerate
+        </button>
       </div>
 
       <div className="sb">
@@ -199,14 +201,18 @@ export function ScheduleView() {
                 <div className="sb-pop-s">Singles ends 3:00, doubles starts 3:00. No rest.</div>
               </div>
             </div>
-            <AIChip>Suggested: push doubles to 3:30 PM (about 8 min rest)</AIChip>
+            <div className="sb-pop-reco">
+              <span className="sw-ai">AI</span>
+              <span>Push his doubles to 3:30 PM (about 8 min rest)</span>
+            </div>
             <div className="sb-pop-actions">
-              <Button variant="primary" icon="check" onClick={applyRohanFix} full>
+              <button className="sw-btn" onClick={applyRohanFix}>
+                <Icon name="check" size={15} stroke={2.4} />
                 Apply fix
-              </Button>
-              <Button variant="ghost" onClick={() => setPick(null)}>
+              </button>
+              <button className="sw-btn-ghost" onClick={() => setPick(null)}>
                 Keep as is
-              </Button>
+              </button>
             </div>
           </div>
         </div>

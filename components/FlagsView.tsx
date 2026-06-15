@@ -1,46 +1,60 @@
 "use client";
 
-// "Needs you" — the organizer's home. A ranked feed of things that need a
-// decision, with an AI-drafted message ready to send. Resolving a flag here
-// mutates the shared store, so the board and player view update too. Ported
-// from the design handoff's flags.jsx.
+// "Needs you" — the organizer's home, rebuilt in the Swiss / International
+// grid idiom. Where the board is a map of space, this is a strict grid of
+// sequence: a numbered feed ranked by cost of waiting, hairline rules, tabular
+// figures, hard-edged severity tags, and a spec-sheet detail pane that keeps
+// the AI-drafted message flow (the "AI suggests, a person decides" moment).
+// Resolving a flag here mutates the shared store, so the board and player view
+// update too.
 import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
-import { Severity, AIChip, Button, ViewHead } from "./ui";
 import { useStore } from "@/lib/store";
-import { clock, type Flag } from "@/lib/data";
+import { clockShort, type Flag, type Severity } from "@/lib/data";
+
+const SEV_LABEL: Record<Severity, string> = {
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+};
 
 function FlagRow({
   flag,
+  rank,
   active,
   onClick,
+  delay,
 }: {
   flag: Flag;
+  rank: number;
   active: boolean;
   onClick: () => void;
+  delay: number;
 }) {
   return (
     <button
       className={
-        "fl-row" + (active ? " fl-row-on" : "") + (flag.resolved ? " fl-row-done" : "")
+        `nf-row sev-${flag.severity}` +
+        (active ? " is-on" : "") +
+        (flag.resolved ? " is-done" : "")
       }
       onClick={onClick}
+      style={{ animationDelay: `${delay}ms` }}
     >
-      <span className="fl-row-ic" data-sev={flag.severity}>
-        {flag.resolved ? (
-          <Icon name="check" size={16} stroke={2.4} />
-        ) : (
-          <Icon name={flag.icon} size={17} />
-        )}
+      <span className="nf-rank">
+        {flag.resolved ? <Icon name="check" size={18} stroke={2.4} /> : rank}
       </span>
-      <span className="fl-row-main">
-        <span className="fl-row-top">
-          {!flag.resolved && <Severity level={flag.severity} />}
-          <span className="fl-row-where">{flag.where}</span>
+      <span className="nf-row-body">
+        <span className="nf-row-h">{flag.title}</span>
+        <span className="nf-row-meta">
+          {!flag.resolved && (
+            <span className={`nf-sev nf-sev--${flag.severity}`}>
+              {SEV_LABEL[flag.severity]}
+            </span>
+          )}
+          <span className="nf-where">{flag.where}</span>
         </span>
-        <span className="fl-row-title">{flag.title}</span>
       </span>
-      {!flag.resolved && <Icon name="chevron" size={16} className="fl-row-arr" />}
     </button>
   );
 }
@@ -56,49 +70,46 @@ function MessageCard({
   onApplyOnly: () => void;
   busy: boolean;
 }) {
-  // MessageCard is remounted (keyed by flag id) whenever the selected flag
-  // changes, so these initialize fresh from props without a reset effect.
+  // Remounted (keyed by flag id) when the selection changes, so these
+  // initialize fresh from props without a reset effect.
   const [body, setBody] = useState(flag.message.body);
   const [edited, setEdited] = useState(false);
 
   return (
-    <div className="msg-card">
-      <div className="msg-head">
-        <AIChip tone="accent">Drafted message</AIChip>
-        <span className="msg-meta">
-          <span className="msg-chan">{flag.message.channel}</span>
-          <span className="msg-to">to {flag.message.to}</span>
+    <div className="nf-msg">
+      <div className="nf-msg-head">
+        <span className="nf-msg-l">
+          <span className="nf-ai">AI</span> Drafted message
+        </span>
+        <span className="nf-msg-meta">
+          {flag.message.channel} · to {flag.message.to}
         </span>
       </div>
-      <div className="msg-bubble">
-        <textarea
-          className="msg-text"
-          value={body}
-          rows={4}
-          onChange={(e) => {
-            setBody(e.target.value);
-            setEdited(true);
-          }}
-        />
+      <textarea
+        className="nf-msg-text"
+        value={body}
+        rows={4}
+        onChange={(e) => {
+          setBody(e.target.value);
+          setEdited(true);
+        }}
+      />
+      <div className="nf-msg-note">
+        {edited ? (
+          <>
+            <Icon name="check" size={13} stroke={2.2} /> edited by you
+          </>
+        ) : (
+          flag.message.note
+        )}
       </div>
-      <div className="msg-foot">
-        <span className="msg-note">
-          {edited ? (
-            <>
-              <Icon name="check" size={13} stroke={2.2} /> edited by you
-            </>
-          ) : (
-            flag.message.note
-          )}
-        </span>
-      </div>
-      <div className="msg-actions">
-        <Button variant="primary" icon="send" onClick={onSend} disabled={busy} full>
-          Approve &amp; send
-        </Button>
-        <Button variant="ghost" onClick={onApplyOnly} disabled={busy}>
+      <div className="nf-actions">
+        <button className="nf-do" onClick={onSend} disabled={busy}>
+          <Icon name="send" size={15} /> Approve &amp; send
+        </button>
+        <button className="nf-ghost" onClick={onApplyOnly} disabled={busy}>
           Apply without message
-        </Button>
+        </button>
       </div>
     </div>
   );
@@ -106,15 +117,15 @@ function MessageCard({
 
 function ResolvedPanel({ flag }: { flag: Flag }) {
   return (
-    <div className="fl-resolved">
-      <div className="fl-resolved-badge">
-        <Icon name="check" size={30} stroke={2.4} />
-      </div>
+    <div className="nf-resolved">
+      <span className="nf-resolved-mark">
+        <Icon name="check" size={26} stroke={2.4} />
+      </span>
       <h3>Handled</h3>
       <p>{flag.suggestion}.</p>
       {flag.sent && (
-        <div className="fl-resolved-sent">
-          <Icon name="send" size={14} /> Message sent to {flag.message.to}
+        <div className="nf-resolved-sent">
+          <Icon name="send" size={13} /> Message sent to {flag.message.to}
         </div>
       )}
     </div>
@@ -136,32 +147,30 @@ function Detail({ flag }: { flag: Flag }) {
   if (flag.resolved) return <ResolvedPanel flag={flag} />;
 
   return (
-    <div className="fl-detail" key={flag.id}>
-      <div className="fl-detail-head">
-        <div className="fl-detail-where">
-          <span className="fl-detail-ic" data-sev={flag.severity}>
-            <Icon name={flag.icon} size={20} />
-          </span>
-          <div>
-            <div className="fl-detail-where-t">{flag.where}</div>
-            <Severity level={flag.severity} />
-          </div>
-        </div>
+    <div className="nf-detail" key={flag.id}>
+      <div className="nf-detail-meta">
+        <span className={`nf-sev nf-sev--${flag.severity}`}>
+          {SEV_LABEL[flag.severity]}
+        </span>
+        <span className="nf-where">{flag.where}</span>
       </div>
-      <h2 className="fl-detail-title">{flag.title}</h2>
-      <p className="fl-detail-sum">{flag.summary}</p>
+      <h2 className="nf-detail-title">{flag.title}</h2>
+      <p className="nf-detail-sum">{flag.summary}</p>
 
-      <div className="fl-why">
-        <span className="fl-why-l">Why it&apos;s flagged</span>
+      <div className="nf-spec">
+        <span className="nf-spec-l">Why it&apos;s flagged</span>
         <p>{flag.reason}</p>
       </div>
 
-      <div className="fl-fix">
-        <div className="fl-fix-head">
-          <AIChip>Suggested fix</AIChip>
-        </div>
-        <div className="fl-fix-body">
-          <Icon name="bolt" size={18} fill style={{ color: "var(--accent)", flexShrink: 0 }} />
+      <div className="nf-spec">
+        <span className="nf-spec-l accent">Recommended</span>
+        <div className="nf-reco-b">
+          <Icon
+            name="bolt"
+            size={17}
+            fill
+            style={{ color: "var(--accent)", flexShrink: 0 }}
+          />
           <span>{flag.suggestion}</span>
         </div>
       </div>
@@ -201,57 +210,73 @@ export function FlagsView() {
 
   return (
     <div className="view view-flags">
-      <ViewHead
-        title="Needs you"
-        sub={
-          open.length === 0
-            ? "Everything's running clean."
-            : `${open.length} ${open.length === 1 ? "thing needs" : "things need"} a decision · auto-sorted by urgency`
-        }
-        right={
-          <>
-            <span className="live-dot">
-              <span className="live-dot-i" /> Live
-            </span>
-            <span className="head-clock">{clock(nowMin)}</span>
-          </>
-        }
-      />
+      <div className="nf-band">
+        <h1 className="nf-title">Needs you</h1>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Need you</span>
+          <span className={"nf-stat-v" + (open.length ? " red" : "")}>
+            {open.length}
+          </span>
+        </div>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Cleared</span>
+          <span className="nf-stat-v">{done.length}</span>
+        </div>
+        <div className="nf-stat">
+          <span className="nf-stat-l">Local time</span>
+          <span className="nf-stat-v">{clockShort(nowMin)}</span>
+        </div>
+      </div>
 
-      <div className="fl-wrap">
-        <div className="fl-list">
+      <div className="nf-wrap">
+        <div className="nf-list">
+          <div className="nf-list-head">
+            Decision feed · ranked by cost of waiting
+          </div>
           {open.length === 0 && (
-            <div className="fl-allclear">
-              <div className="fl-allclear-ic">
-                <Icon name="check" size={26} stroke={2.4} />
-              </div>
+            <div className="nf-allclear">
+              <span className="nf-allclear-mark">
+                <Icon name="check" size={20} stroke={2.4} />
+              </span>
               <div>
-                <div className="fl-allclear-t">All clear</div>
-                <div className="fl-allclear-s">Nothing needs you right now.</div>
+                <div className="nf-allclear-t">All clear</div>
+                <div className="nf-allclear-s">Nothing needs you right now.</div>
               </div>
             </div>
           )}
-          {open.map((f) => (
-            <FlagRow key={f.id} flag={f} active={f.id === sel} onClick={() => setSel(f.id)} />
+          {open.map((f, i) => (
+            <FlagRow
+              key={f.id}
+              flag={f}
+              rank={i + 1}
+              active={f.id === sel}
+              onClick={() => setSel(f.id)}
+              delay={i * 45}
+            />
           ))}
           {done.length > 0 && (
             <>
-              <div className="fl-list-sect">Cleared · {done.length}</div>
-              {done.map((f) => (
-                <FlagRow key={f.id} flag={f} active={f.id === sel} onClick={() => setSel(f.id)} />
+              <div className="nf-sect">Cleared · {done.length}</div>
+              {done.map((f, i) => (
+                <FlagRow
+                  key={f.id}
+                  flag={f}
+                  rank={open.length + i + 1}
+                  active={f.id === sel}
+                  onClick={() => setSel(f.id)}
+                  delay={0}
+                />
               ))}
             </>
           )}
         </div>
 
-        <div className="fl-panel">
+        <div className="nf-detail-pane">
           {selected ? (
             <Detail flag={selected} />
           ) : (
-            <div className="fl-empty">
-              <div className="fl-empty-ic">
-                <Icon name="shuttle" size={34} />
-              </div>
+            <div className="nf-empty">
+              <Icon name="shuttle" size={32} />
               <p>You&apos;re all caught up.</p>
             </div>
           )}

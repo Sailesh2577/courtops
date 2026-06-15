@@ -1,18 +1,16 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
 
-// Hanken Grotesk (UI) + JetBrains Mono (timers/scores/stats), self-hosted by
-// next/font and exposed as the CSS variables our tokens reference. Both are
-// variable fonts, so we omit `weight` to get the full 400–800 range.
+// One typeface across the whole product: Hanken Grotesk, self-hosted by
+// next/font. It is a variable font, so we omit `weight` to get the full
+// 400–800 range. Numbers use its tabular figures (font-variant-numeric) so
+// timers and scores stay aligned; we deliberately do not ship a second
+// (mono) family. --font-mono is aliased to this in globals.css for any older
+// rules that still reference it.
 const sans = Hanken_Grotesk({
   variable: "--font-ui",
-  subsets: ["latin"],
-  display: "swap",
-});
-const mono = JetBrains_Mono({
-  variable: "--font-mono",
   subsets: ["latin"],
   display: "swap",
 });
@@ -34,7 +32,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-theme="light"
-      className={`${sans.variable} ${mono.variable}`}
+      className={sans.variable}
       suppressHydrationWarning
     >
       <head>

@@ -1,150 +1,116 @@
 "use client";
 
-// Court board — live status of every court. Reads the shared store, so when a
-// flag is resolved (here or on "Needs you") the affected court flips live in
-// place. Ported from the design handoff's board.jsx.
-import { Icon } from "./Icon";
-import { Pill, Avatar, Button, ViewHead } from "./ui";
+// Court board — a floor plan of the hall. Each court is drawn as an actual
+// court in its real floor position and filled by status, so an organizer reads
+// the room at a glance. Reads the shared store, so resolving a flag (here or on
+// "Needs you") makes the affected court light up in place. When a court flips
+// to live the tile plays the "assign" flash: the signature one-action moment.
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "@/lib/store";
 import { CATS, clock, mmss, type Court, type Match } from "@/lib/data";
 
-function Side({ names, serving }: { names: string[]; serving?: boolean }) {
-  return (
-    <div className={"ct-side" + (serving ? " ct-side-serve" : "")}>
-      <div className="ct-avs">
-        {names.map((n) => (
-          <Avatar key={n} name={n} size={26} />
-        ))}
-      </div>
-      <div className="ct-names">
-        {names.map((n) => (
-          <span key={n}>{n}</span>
-        ))}
-      </div>
-      {serving && (
-        <span className="ct-serve" title="Serving">
-          <Icon name="shuttle" size={14} />
-        </span>
-      )}
-    </div>
-  );
+// Compact side label: last names joined, e.g. ["Maya Lin","Sofia Marin"] -> "Lin/Marin".
+const lastName = (n: string) => n.split(/\s+/).filter(Boolean).slice(-1)[0] ?? n;
+const sideShort = (names: string[]) => names.map(lastName).join("/");
+
+// Which visual state a court is in. Attention (a flag points at it) wins, so the
+// most expensive courts read red even when technically "idle".
+function courtKind(court: Court): "live" | "warm" | "alert" | "idle" {
+  if (court.attention) return "alert";
+  if (court.status === "live") return "live";
+  if (court.status === "ready" || court.status === "warming") return "warm";
+  return "idle";
 }
 
-function Score({ games }: { games: [number, number][] }) {
-  if (!games.length) return null;
-  return (
-    <div className="ct-score">
-      {games.map((g, i) => (
-        <div className={"ct-game" + (i === games.length - 1 ? " ct-game-now" : "")} key={i}>
-          <span className={g[0] > g[1] ? "win" : ""}>{g[0]}</span>
-          <span className={g[1] > g[0] ? "win" : ""}>{g[1]}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function CourtCard({ court }: { court: Court }) {
+function CourtTile({ court, index }: { court: Court; index: number }) {
   const matches = useStore((s) => s.matches);
   const flags = useStore((s) => s.flags);
   const resolveFlag = useStore((s) => s.resolveFlag);
 
   const match: Match | null = court.matchId ? matches[court.matchId] : null;
-  const cat = match ? CATS[match.cat] : null;
-  // the flag wired to this court (drives the idle-court quick action)
-  const flag = flags.find((f) => !f.resolved && "courtId" in f.effect && f.effect.courtId === court.id);
+  // the unresolved flag wired to this court (drives the idle-court quick action)
+  const flag = flags.find(
+    (f) => !f.resolved && "courtId" in f.effect && f.effect.courtId === court.id
+  );
+  // for an empty court that a match is waiting on, pull the incoming match so we
+  // can name it on the tile even though it isn't assigned here yet.
+  const incoming: Match | null =
+    !match && flag && "matchId" in flag.effect ? matches[flag.effect.matchId] ?? null : null;
+
+  const kind = courtKind(court);
+  const num = court.id.replace(/^C/, "");
+
+  // Play the assign flash exactly when this court transitions into "live".
+  const [flash, setFlash] = useState(false);
+  const prevStatus = useRef(court.status);
+  useEffect(() => {
+    if (prevStatus.current !== "live" && court.status === "live") {
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 1300);
+      prevStatus.current = court.status;
+      return () => clearTimeout(t);
+    }
+    prevStatus.current = court.status;
+  }, [court.status]);
 
   return (
-    <div className={"court" + (court.attention ? " court-flag" : "") + " court-" + court.status}>
-      <div className="court-head">
-        <div className="court-id">
-          <span className="court-no">{court.id}</span>
-          <span className="court-name">{court.name}</span>
-        </div>
-        <Pill status={court.status} soft />
-      </div>
+    <div
+      className={`fp-court is-${kind}${flash ? " fp-flash" : ""}`}
+      style={{ animationDelay: `${index * 45}ms` }}
+      title={court.name}
+    >
+      <div className="fp-mk" />
+      <div className="fp-net" />
+      <div className="fp-info">
+        <div className="fp-n">{num}</div>
 
-      {match && match.status === "live" && cat && (
-        <div className="court-body">
-          <div className="court-meta">
-            <span className="court-cat">{cat.long}</span>
-            <span className="court-round">{match.round}</span>
-          </div>
-          <div className="court-match">
-            <Side names={match.a} serving={match.serving === "a"} />
-            <Score games={match.games} />
-            <Side names={match.b} serving={match.serving === "b"} />
-          </div>
-          <div className="court-foot">
-            <span className="court-timer">
-              <Icon name="clock" size={14} />
-              {mmss(match.elapsedSec)}
-            </span>
-            {match.overrun ? (
-              <span className="court-warn">
-                <Icon name="bolt" size={13} fill /> {match.overrun} min over
-              </span>
-            ) : (
-              <span className="court-ontime">on schedule</span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {match && (match.status === "ready" || match.status === "warming") && cat && (
-        <div className="court-body">
-          <div className="court-meta">
-            <span className="court-cat">{cat.long}</span>
-            <span className="court-round">{match.round}</span>
-          </div>
-          <div className="court-match court-match-pre">
-            <Side names={match.a} />
-            <span className="ct-vs">vs</span>
-            <Side names={match.b} />
-          </div>
-          <div className="court-foot">
-            <span className="court-soft">
-              {court.note || (match.status === "warming" ? "Warming up" : "Ready to start")}
-            </span>
-            <Button size="sm" variant="soft" icon="signal">
-              Start match
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {!match && (
-        <div className="court-body court-empty">
-          {court.attention ? (
-            <>
-              <div className="court-empty-top">
-                <span className="court-empty-ic court-empty-alert">
-                  <Icon name="bolt" size={18} fill />
-                </span>
-                <span className="court-empty-note">{court.note}</span>
-              </div>
-              {flag && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  icon="arrow"
-                  onClick={() => resolveFlag(flag.id, { sent: true, method: "auto" })}
-                  full
-                >
-                  {flag.type === "idle_court" ? "Send ready match here" : "Call players to court"}
-                </Button>
-              )}
-            </>
-          ) : (
-            <div className="court-open">
-              <span className="court-empty-ic">
-                <Icon name="court" size={18} />
-              </span>
-              <span>Open court</span>
+        {match && match.status === "live" && (
+          <>
+            <div className="fp-st">{match.overrun ? "Live · over plan" : "Live"}</div>
+            <div className="fp-who">
+              {sideShort(match.a)} v {sideShort(match.b)}
             </div>
-          )}
-        </div>
-      )}
+            <div className={"fp-clk" + (match.overrun ? " over" : "")}>
+              {match.overrun ? `+${match.overrun} min over` : mmss(match.elapsedSec)}
+            </div>
+          </>
+        )}
+
+        {match && (match.status === "ready" || match.status === "warming") && (
+          <>
+            <div className="fp-st">{match.status === "warming" ? "Warm-up" : "Ready"}</div>
+            <div className="fp-who">
+              {sideShort(match.a)} v {sideShort(match.b)}
+            </div>
+            <div className="fp-clk">
+              {match.startsInMin ? `~${match.startsInMin} min` : CATS[match.cat].short}
+            </div>
+          </>
+        )}
+
+        {!match && court.attention && (
+          <>
+            <div className="fp-st">{incoming ? "Open · match ready" : "Needs you"}</div>
+            {incoming && (
+              <div className="fp-who">
+                {sideShort(incoming.a)} v {sideShort(incoming.b)}
+              </div>
+            )}
+            {flag ? (
+              <button
+                className="fp-act"
+                onClick={() => resolveFlag(flag.id, { sent: true, method: "auto" })}
+              >
+                {flag.type === "idle_court" ? "Send here" : "Call players"}
+              </button>
+            ) : (
+              court.note && <div className="fp-clk">{court.note}</div>
+            )}
+          </>
+        )}
+
+        {!match && !court.attention && <div className="fp-st">Open</div>}
+      </div>
     </div>
   );
 }
@@ -152,31 +118,41 @@ function CourtCard({ court }: { court: Court }) {
 export function BoardView() {
   const courts = useStore((s) => s.courts);
   const nowMin = useStore((s) => s.nowMin);
+  const openCount = useStore((s) => s.openCount);
 
   const live = courts.filter((c) => c.status === "live").length;
   const idle = courts.filter((c) => c.status === "idle").length;
   const ready = courts.filter((c) => c.status === "ready" || c.status === "warming").length;
   const usage = Math.round((live / courts.length) * 100);
+  const needs = openCount();
 
   return (
     <div className="view view-board">
-      <ViewHead
-        title="Court board"
-        sub={`${courts.length} courts · ${live} live · ${ready} ready · ${idle} idle`}
-        right={
-          <>
-            <div className="board-usage">
-              <span className="board-usage-v">{usage}%</span>
-              <span className="board-usage-l">court usage</span>
-            </div>
-            <span className="head-clock">{clock(nowMin)}</span>
-          </>
-        }
-      />
-      <div className="board-grid">
-        {courts.map((c) => (
-          <CourtCard key={c.id} court={c} />
-        ))}
+      <div className="view-head">
+        <div>
+          <h1 className="view-title">Court board</h1>
+          <p className="view-sub">
+            {courts.length} courts · {live} live · {ready} ready · {idle} idle
+            {needs > 0 ? ` · ${needs} need you` : ""}
+          </p>
+        </div>
+        <div className="view-head-right">
+          <div className="board-usage">
+            <span className="board-usage-v">{usage}%</span>
+            <span className="board-usage-l">court usage</span>
+          </div>
+          <span className="head-clock">{clock(nowMin)}</span>
+        </div>
+      </div>
+
+      <div className="fp-venue">
+        <span className="fp-venue-label">Lincoln Sports Center · show court layout</span>
+        <div className="fp-map">
+          {courts.map((c, i) => (
+            <CourtTile key={c.id} court={c} index={i} />
+          ))}
+        </div>
+        <span className="fp-entrance">↑ Entrance / check-in</span>
       </div>
     </div>
   );

@@ -28,6 +28,9 @@
 /docs/*
 !/docs/CourtOps_PRD.docx
 
+# throwaway HTML design mockups, not part of the app
+/prototypes/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
