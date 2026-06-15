@@ -9,6 +9,7 @@ import {
   type Toast,
 } from "./data";
 import { supabase } from "./supabaseClient";
+import type { User } from "@supabase/supabase-js";
 import {
   rowToMatch,
   rowToCourt,
@@ -36,8 +37,12 @@ type ResolveOpts = { sent?: boolean; method?: "manual" | "auto" };
 
 type CourtOpsStore = CourtOpsState & {
   ready: boolean; // true once the first load from Supabase has completed
+  user: User | null; // the signed-in organizer, or null (anon player / signed out)
+  authReady: boolean; // true once the initial session check has completed
   tick: () => void;
   init: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signOut: () => Promise<void>;
   resolveFlag: (id: string, opts?: ResolveOpts) => void;
   pushToast: (t: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
@@ -108,10 +113,13 @@ function touchedByEffect(effect: Effect): {
 }
 
 let realtimeBound = false;
+let authBound = false;
 
 export const useStore = create<CourtOpsStore>((set, get) => ({
   ...makeInitial(),
   ready: false,
+  user: null,
+  authReady: false,
 
   // advance elapsed timers for every live match (called once a second).
   // Local-only and never persisted; this is just smooth animation.
@@ -125,25 +133,21 @@ export const useStore = create<CourtOpsStore>((set, get) => ({
       return { matches };
     }),
 
-  // Sign in, load the live tournament from Supabase, and subscribe to Realtime.
-  // Safe to call more than once; the subscription is only bound on first call.
+  // Load the live tournament from Supabase and subscribe to Realtime. Also
+  // restores any existing organizer session. Safe to call more than once; the
+  // listeners are only bound on the first call.
   init: async () => {
-    // Ensure an authenticated session so writes pass row level security. The
-    // organizer dashboard writes; the player phone only reads, so a failure
-    // here is non-fatal (reads still work as the anon role).
+    // Restore the organizer session if there is one. Reads do not need it (the
+    // player phone reads as the anon role); only writes do, gated by RLS.
     const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      const { error } = await supabase.auth.signInAnonymously();
-      if (error) {
-        console.warn(
-          "Supabase anonymous sign-in failed (writes will be blocked). Enable Anonymous sign-ins in Authentication settings.",
-          error.message
-        );
-        get().pushToast({
-          title: "Sync is read-only",
-          body: "Enable Anonymous sign-ins in Supabase to sync changes across devices.",
-        });
-      }
+    set({ user: sessionData.session?.user ?? null, authReady: true });
+
+    // Keep the store in sync if the session changes in another tab or expires.
+    if (!authBound) {
+      authBound = true;
+      supabase.auth.onAuthStateChange((_event, session) => {
+        set({ user: session?.user ?? null, authReady: true });
+      });
     }
 
     // Load every live table in parallel and hydrate the store.
@@ -209,6 +213,24 @@ export const useStore = create<CourtOpsStore>((set, get) => ({
         }
       )
       .subscribe();
+  },
+
+  // Sign the organizer in with email + password. On success the session is
+  // persisted by the Supabase client, so writes start passing RLS immediately.
+  signIn: async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) return { error: error.message };
+    set({ user: data.user ?? null, authReady: true });
+    return { error: null };
+  },
+
+  // Sign the organizer out. The dashboard falls back to read-only (anon).
+  signOut: async () => {
+    await supabase.auth.signOut();
+    set({ user: null });
   },
 
   // Resolve a flag: apply its effect locally (snappy), announce it, then persist
@@ -314,11 +336,11 @@ async function persist(
 
   if (blocked) {
     console.warn(
-      "Write was blocked by row level security (no authenticated session). Enable Anonymous sign-ins in Supabase."
+      "Write was blocked by row level security (no organizer session). Sign in as the organizer to make changes."
     );
     useStore.getState().pushToast({
       title: "Change didn't sync",
-      body: "No write access. Enable Anonymous sign-ins in Supabase so changes persist.",
+      body: "You're signed out. Sign in as the organizer so changes persist.",
     });
   }
 }

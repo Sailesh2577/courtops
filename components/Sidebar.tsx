@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
 import { Avatar } from "./ui";
 import { useStore } from "@/lib/store";
 import { EVENT } from "@/lib/data";
+import { DEMO_ORG } from "@/lib/auth";
 
 type NavItem = {
   label: string;
@@ -32,9 +33,20 @@ export function Sidebar({
   onToggleTheme: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const flags = useStore((s) => s.flags);
+  const user = useStore((s) => s.user);
+  const signOut = useStore((s) => s.signOut);
   const openCount = flags.filter((f) => !f.resolved).length;
   const delayActive = !flags.find((f) => f.id === "f2")?.resolved;
+
+  // Prefer the configured display name; fall back to the part before the @.
+  const orgName = DEMO_ORG.name || user?.email?.split("@")[0] || "Organizer";
+
+  async function handleSignOut() {
+    await signOut();
+    router.replace("/login");
+  }
 
   return (
     <aside className="side">
@@ -82,11 +94,19 @@ export function Sidebar({
         </div>
 
         <div className="org">
-          <Avatar name="Sailesh P" size={30} />
+          <Avatar name={orgName} size={30} />
           <div className="org-meta">
-            <span className="org-name">Sailesh P.</span>
-            <span className="org-role">Organizer</span>
+            <span className="org-name">{orgName}</span>
+            <span className="org-role">{user?.email ?? "Organizer"}</span>
           </div>
+          <button
+            className="org-out"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <Icon name="arrow" size={16} />
+          </button>
         </div>
       </div>
     </aside>

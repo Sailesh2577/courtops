@@ -256,6 +256,8 @@ a {
   display: flex;
   flex-direction: column;
   line-height: 1.25;
+  min-width: 0;
+  flex: 1;
 }
 .org-name {
   font-weight: 600;
@@ -265,6 +267,152 @@ a {
 .org-role {
   font-size: 11px;
   color: var(--side-ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.org-out {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--side-ink-2);
+  border-radius: var(--r3);
+  transform: rotate(180deg); /* arrow points out (left) */
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.org-out:hover {
+  color: var(--side-ink);
+  border-color: var(--side-ink-2);
+  background: var(--side-surface);
+}
+
+/* ── auth (organizer sign-in) ───────────────────────────────────────────────
+   Same Swiss idiom as the dashboard: hairline rules, a heavy ink top rule,
+   square edges, one typeface. Stands alone with no sidebar. */
+.auth {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.auth-hold {
+  min-height: 100vh;
+  background: var(--bg);
+}
+.auth-card {
+  width: 100%;
+  max-width: 392px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--ink);
+  padding: 30px 30px 26px;
+  animation: viewIn 0.42s cubic-bezier(0.22, 0.7, 0.3, 1);
+}
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 26px;
+}
+.auth-mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--r2);
+}
+.auth-brand-name {
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+.auth-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  margin: 0 0 9px;
+}
+.auth-sub {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  margin: 0 0 22px;
+  text-wrap: pretty;
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 700;
+}
+.auth-input {
+  width: 100%;
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 14px;
+  padding: 11px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.auth-input:focus {
+  border-color: var(--ink);
+}
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--alert);
+  background: color-mix(in oklab, var(--alert) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--alert) 35%, transparent);
+  padding: 9px 11px;
+}
+.auth-form .sw-btn {
+  margin-top: 4px;
+}
+.auth-demo {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.auth-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  transition: color 0.15s;
+}
+.auth-player:hover {
+  color: var(--ink);
 }
 
 /* ── main ─────────────────────────────────────────────────────────────────── */

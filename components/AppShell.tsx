@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Toasts } from "./Toasts";
 import { useStore } from "@/lib/store";
+import { isPublicRoute } from "@/lib/auth";
 
 type Theme = "light" | "dark";
 
@@ -16,15 +17,28 @@ type Theme = "light" | "dark";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
   const pathname = usePathname();
+  const router = useRouter();
   const tick = useStore((s) => s.tick);
   const init = useStore((s) => s.init);
+  const user = useStore((s) => s.user);
+  const authReady = useStore((s) => s.authReady);
 
-  // Sign in, load the tournament from Supabase, and subscribe to Realtime once
-  // on mount. Until this resolves the screens render the seed state, which
-  // matches the database, so there is no loading flash.
+  // The login screen and the player phone are open to everyone; every other
+  // screen is an organizer surface and needs a signed-in session.
+  const isLogin = pathname === "/login" || pathname.startsWith("/login/");
+  const gated = !isPublicRoute(pathname);
+
+  // Load the tournament from Supabase and restore any session once on mount.
+  // Until this resolves the screens render the seed state, which matches the
+  // database, so there is no loading flash.
   useEffect(() => {
     void init();
   }, [init]);
+
+  // Send signed-out visitors away from organizer surfaces to the login screen.
+  useEffect(() => {
+    if (authReady && gated && !user) router.replace("/login");
+  }, [authReady, gated, user, router]);
 
   // Advance the elapsed timers on every live match once a second. One interval
   // for the whole app; the board and player view read the result from the store.
@@ -54,6 +68,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
+  }
+
+  // The login screen stands alone, with no organizer chrome around it.
+  if (isLogin) {
+    return (
+      <>
+        {children}
+        <Toasts />
+      </>
+    );
+  }
+
+  // On organizer surfaces, hold the screen until auth resolves so we never flash
+  // the dashboard to a signed-out visitor before redirecting them to login.
+  if (gated && (!authReady || !user)) {
+    return <div className="auth-hold" aria-busy="true" />;
   }
 
   return (

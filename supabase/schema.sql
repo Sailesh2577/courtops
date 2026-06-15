@@ -150,9 +150,11 @@ create policy "read blocks"   on blocks   for select using (true);
 create policy "read players"  on players  for select using (true);
 create policy "read activity" on activity for select using (true);
 
--- write: signed-in users only (organizers). Players use anonymous sessions,
--- which still count as authenticated in Supabase, so for a stricter demo this
--- can later check a role claim. Kept simple for now.
+-- write: signed-in users only (organizers). Players never authenticate; they
+-- read as the anon role through the policies above. The only account is the
+-- demo organizer (created by `npm run seed:org`), so `authenticated` cleanly
+-- means "the organizer". DISABLE Anonymous sign-ins in Supabase Authentication
+-- settings so an anon visitor can never obtain a writable session.
 create policy "write events"   on events   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "write matches"  on matches  for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 create policy "write courts"   on courts   for all using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');

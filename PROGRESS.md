@@ -4,7 +4,7 @@ A living log of what this project is, the decisions we have made, and where we
 are. Update this whenever something meaningful changes so a new chat can read it
 and pick up quickly. CLAUDE.md points here.
 
-Last updated: 2026-06-15 (UI redesign: Board + Needs You done)
+Last updated: 2026-06-15 (Phase 2 done: organizer login + role separation)
 
 ## What CourtOps is
 
@@ -61,13 +61,17 @@ moment that shows "one action, everything updates."
   Reschedule). The signature Court 3 flow works: resolving flag f1 sends Aanya
   to Court 3 and the board plus the player phone update off the same store.
   Verified with build, typecheck, and lint.
-- Phase 2 — IN PROGRESS (sync working): Supabase wiring. The store now loads
-  the live tournament from Supabase, subscribes to Realtime, and persists the
-  rows a flag touches so the organizer board and the player phone sync across
-  two separate browser sessions. Verified end to end: resolving "Court 3 is
-  open" on the board pushes Aanya to Court 3 on the player phone in real time.
-  Auth is anonymous for now (organizer writes, player reads). Still to do:
-  add the env vars to Vercel, then a real organizer login + role separation.
+- Phase 2 — DONE: Supabase wiring with real auth. The store loads the live
+  tournament, subscribes to Realtime, and persists the rows a flag touches so
+  the organizer board and the player phone sync across separate sessions.
+  Verified end to end: resolving "Court 3 is open" pushes Aanya to Court 3 on
+  the player phone in real time. Auth is now a real organizer login: the
+  organizer signs in with email + password (single seeded demo account); the
+  player phone never authenticates and reads as the anon role. RLS writes are
+  gated to authenticated sessions, which now cleanly means "the organizer".
+  Organizer surfaces are gated client-side (redirect to /login); /player and
+  /login are public. Still optional: add the env vars to Vercel so the live
+  site syncs (the 3 Supabase vars; the demo org vars are optional overrides).
 - Phase 3+ — AI: operator copilot (natural-language command bar that proposes
   a plan a person approves) + predictive delay radar. Gemini, server-side only.
   Player message drafting folds into the copilot.
@@ -88,6 +92,13 @@ shared store.
   `resolveFlag` updates locally for snappiness, then `persist()` writes the
   changed rows so Realtime broadcasts them. The per-second `tick` stays local
   and is never written, so there is no write storm and demo numbers stay stable.
+- `lib/auth.ts` — auth config: the demo organizer credentials (DEMO_ORG, from
+  NEXT_PUBLIC env with demo fallbacks) and the public-route list used by the
+  AppShell gate.
+- `app/login/page.tsx` — the organizer sign-in screen (email + password,
+  pre-filled demo creds). Renders standalone, no sidebar.
+- `scripts/seed-organizer.ts` — creates/resets the demo organizer auth account
+  with the service-role key. Run with `npm run seed:org`.
 - `lib/supabaseClient.ts` — the browser Supabase client (reads NEXT_PUBLIC env).
 - `lib/supabaseRows.ts` — mappers between snake_case DB rows and the camelCase
   TS types. Column names live in exactly one place here.
@@ -99,7 +110,8 @@ shared store.
 - `components/{Board,Flags,Player,Schedule,Reschedule}View.tsx` — the five
   screens as client components. The route `page.tsx` files just render them.
 - `components/AppShell.tsx` — owns the once-a-second tick interval, the theme,
-  and calls `init()` once on mount.
+  calls `init()` once on mount, and gates organizer routes (redirects signed-out
+  visitors to /login; lets /player and /login through).
 - `components/{ui,Icon,Sidebar,Toasts}.tsx` — shared primitives and chrome.
 
 ## Supabase / environment
@@ -108,10 +120,18 @@ shared store.
   NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY. `.env.local.example`
   is the committed template.
 - RLS: read is open to everyone (so the player phone reads without logging in);
-  writes require an authenticated session. The organizer signs in anonymously,
-  which counts as authenticated. Anonymous sign-ins must be ENABLED in Supabase
-  Authentication settings or writes silently change 0 rows (the app now surfaces
-  a "Change didn't sync" toast when that happens).
+  writes require an authenticated session. The organizer signs in with email +
+  password (a single seeded demo account), so `authenticated` now cleanly means
+  "the organizer". Players never authenticate. Anonymous sign-ins should be
+  DISABLED in Supabase Authentication settings (the opposite of the earlier
+  anonymous approach) so an anon visitor can never get a writable session. If
+  the organizer is signed out, writes silently change 0 rows and the app
+  surfaces a "Change didn't sync · sign in" toast.
+- Auth account: create the demo organizer with `npm run seed:org` (uses the
+  service-role key, admin API; idempotent, resets the password to lib/auth.ts
+  DEMO_ORG). The login page (/login) pre-fills the demo credentials so the live
+  link works in one click. Defaults: sailesh@courtops.demo / courtops-demo,
+  overridable via NEXT_PUBLIC_DEMO_ORG_* env vars.
 - For the live Vercel site to work, the 3 env vars must be added in Vercel
   Project Settings -> Environment Variables.
 
@@ -168,3 +188,15 @@ shared store.
   Button, and Severity from components/ui.tsx (kept Avatar, Stat, Pill,
   StatusDot, STATUS, initials, StatusKey, which are still referenced). Build,
   typecheck, lint all clean.
+- 2026-06-15: Phase 2 finished — real organizer login + role separation.
+  Replaced anonymous sign-in with an email + password organizer account. init()
+  no longer signs in anonymously; it restores any session and subscribes to
+  auth changes. Added signIn/signOut to the store, a /login page (Swiss idiom,
+  pre-filled demo creds), and a client-side route gate in AppShell (organizer
+  surfaces redirect signed-out visitors to /login; /player and /login are
+  public). Sidebar shows the real signed-in organizer and a sign-out control.
+  New lib/auth.ts holds DEMO_ORG + the public-route list. scripts/seed-organizer
+  .ts (npm run seed:org) creates/resets the demo account via the admin API.
+  Updated schema.sql comments and .env.local.example; with real login,
+  Anonymous sign-ins should now be DISABLED in Supabase. Players read as anon
+  (unchanged); only the organizer can write. Build, typecheck, lint all clean.

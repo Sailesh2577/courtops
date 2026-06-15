@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "seed:org": "tsx scripts/seed-organizer.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",
