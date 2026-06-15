@@ -40,7 +40,9 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>
+      {/* suppressHydrationWarning: some browser extensions (e.g. Grammarly)
+          inject attributes on <body> before React hydrates. */}
+      <body suppressHydrationWarning>
         <AppShell>{children}</AppShell>
       </body>
     </html>

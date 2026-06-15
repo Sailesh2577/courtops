@@ -17,6 +17,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
   const pathname = usePathname();
   const tick = useStore((s) => s.tick);
+  const init = useStore((s) => s.init);
+
+  // Sign in, load the tournament from Supabase, and subscribe to Realtime once
+  // on mount. Until this resolves the screens render the seed state, which
+  // matches the database, so there is no loading flash.
+  useEffect(() => {
+    void init();
+  }, [init]);
 
   // Advance the elapsed timers on every live match once a second. One interval
   // for the whole app; the board and player view read the result from the store.
