@@ -18,6 +18,7 @@ import {
   rowToBlock,
   matchToRow,
   courtToRow,
+  flagToRow,
   blockToRow,
   type MatchRow,
   type CourtRow,
@@ -46,6 +47,7 @@ type CourtOpsStore = CourtOpsState & {
   signOut: () => Promise<void>;
   resolveFlag: (id: string, opts?: ResolveOpts) => void;
   applyPlan: (plan: CopilotPlan) => Promise<void>;
+  resetDemo: () => Promise<void>;
   pushToast: (t: Omit<Toast, "id">) => void;
   dismissToast: (id: string) => void;
   openCount: () => number;
@@ -253,8 +255,9 @@ export const useStore = create<CourtOpsStore>((set, get) => ({
       title: opts.sent ? "Message sent · flag cleared" : "Flag cleared",
       body: flag.suggestion + ".",
     };
-    // Optimistic local update.
-    set({ matches, courts, blocks, flags, toasts: [...s.toasts, toast] });
+    // Optimistic local update. Each cleared flag counts as one organizer fix,
+    // which feeds the headline fixes/hour metric.
+    set({ matches, courts, blocks, flags, fixes: s.fixes + 1, toasts: [...s.toasts, toast] });
 
     // Persist the changed rows (fire and forget; Realtime keeps others in sync).
     void persist(flag.effect, { matches, courts, blocks }, id, {
@@ -320,8 +323,8 @@ export const useStore = create<CourtOpsStore>((set, get) => ({
       });
     }
 
-    // Optimistic local update.
-    set({ matches, courts, blocks, flags, toasts: [...s.toasts, ...toasts] });
+    // Optimistic local update. An approved plan is one organizer fix.
+    set({ matches, courts, blocks, flags, fixes: s.fixes + 1, toasts: [...s.toasts, ...toasts] });
 
     // Persist the rows the plan touched (fire and forget; Realtime syncs others).
     await persistChanges(
@@ -334,6 +337,63 @@ export const useStore = create<CourtOpsStore>((set, get) => ({
       },
       { summary: plan.summary, steps: plan.steps }
     );
+  },
+
+  // Reset the demo back to the seed tournament, so the signature flows can be
+  // re-run live without the seed script. Restores the local store immediately,
+  // then writes the seed values to every row as the organizer (the same write
+  // path resolveFlag uses), which Realtime broadcasts to the player phone too.
+  resetDemo: async () => {
+    const fresh = makeInitial();
+
+    // Local first for a snappy reset; keep auth/ready as they are.
+    set({
+      nowMin: fresh.nowMin,
+      matches: fresh.matches,
+      courts: fresh.courts,
+      flags: fresh.flags,
+      blocks: fresh.blocks,
+      scheduleGenerated: fresh.scheduleGenerated,
+      estIdle: fresh.estIdle,
+      fixes: fresh.fixes,
+      toasts: [
+        ...get().toasts,
+        { id: nextToastId(), title: "Demo reset", body: "Back to the seed tournament." },
+      ],
+    });
+
+    // Write the seed values back to every row, then check whether RLS blocked us.
+    type Res = { error: unknown; data: unknown[] | null };
+    const updates: PromiseLike<Res>[] = [];
+    for (const m of Object.values(fresh.matches)) {
+      updates.push(supabase.from("matches").update(matchToRow(m)).eq("id", m.id).select());
+    }
+    fresh.courts.forEach((c, i) => {
+      updates.push(supabase.from("courts").update(courtToRow(c, i)).eq("id", c.id).select());
+    });
+    fresh.flags.forEach((f, i) => {
+      updates.push(supabase.from("flags").update(flagToRow(f, i)).eq("id", f.id).select());
+    });
+    for (const b of fresh.blocks) {
+      updates.push(supabase.from("blocks").update(blockToRow(b)).eq("id", b.id).select());
+    }
+
+    const results = await Promise.all(updates);
+    let blocked = false;
+    for (const r of results) {
+      if (r.error) console.warn("Reset write failed:", r.error);
+      else if (!r.data || r.data.length === 0) blocked = true;
+    }
+
+    const act = await supabase.from("activity").insert({ kind: "demo_reset", method: "manual" });
+    if (act.error) console.warn("Activity log failed:", act.error);
+
+    if (blocked) {
+      useStore.getState().pushToast({
+        title: "Reset didn't sync",
+        body: "You're signed out. Sign in as the organizer so the reset persists.",
+      });
+    }
   },
 
   pushToast: (t) =>

@@ -10,7 +10,7 @@
 import { useEffect, useState } from "react";
 import { Icon } from "./Icon";
 import { useStore } from "@/lib/store";
-import { clockShort, type Flag, type Severity } from "@/lib/data";
+import { fixesPerHour, type Flag, type Severity } from "@/lib/data";
 
 const SEV_LABEL: Record<Severity, string> = {
   high: "High",
@@ -189,9 +189,11 @@ function Detail({ flag }: { flag: Flag }) {
 export function FlagsView() {
   const flags = useStore((s) => s.flags);
   const nowMin = useStore((s) => s.nowMin);
+  const fixes = useStore((s) => s.fixes);
 
   const open = flags.filter((f) => !f.resolved);
   const done = flags.filter((f) => f.resolved);
+  const rate = fixesPerHour(fixes, nowMin);
   const [sel, setSel] = useState<string | null>(open[0]?.id ?? null);
 
   // When the selected flag gets resolved, slide to the next open one after a
@@ -213,6 +215,12 @@ export function FlagsView() {
       <div className="nf-band">
         <h1 className="nf-title">Needs you</h1>
         <div className="nf-stat">
+          <span className="nf-stat-l">Fixes / hr</span>
+          <span className="nf-stat-v accent" title="Organizer fixes per hour today">
+            {rate}
+          </span>
+        </div>
+        <div className="nf-stat">
           <span className="nf-stat-l">Need you</span>
           <span className={"nf-stat-v" + (open.length ? " red" : "")}>
             {open.length}
@@ -221,10 +229,6 @@ export function FlagsView() {
         <div className="nf-stat">
           <span className="nf-stat-l">Cleared</span>
           <span className="nf-stat-v">{done.length}</span>
-        </div>
-        <div className="nf-stat">
-          <span className="nf-stat-l">Local time</span>
-          <span className="nf-stat-v">{clockShort(nowMin)}</span>
         </div>
       </div>
 

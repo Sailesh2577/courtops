@@ -4,7 +4,7 @@ A living log of what this project is, the decisions we have made, and where we
 are. Update this whenever something meaningful changes so a new chat can read it
 and pick up quickly. CLAUDE.md points here.
 
-Last updated: 2026-06-15 (Phase 3b done: predictive delay radar)
+Last updated: 2026-06-15 (Phase 3c done: fixes/hour metric + demo reset)
 
 ## What CourtOps is
 
@@ -100,10 +100,21 @@ moment that shows "one action, everything updates."
   16 min over, projected free at 2:32, which pushes the 2:30 MS Final by 2 min
   (honest numbers, not dramatized). The delay ping (the sidebar dot) moved from
   Reschedule to the new Radar item. Build, typecheck, lint clean.
-- Phase 3c — NEXT: surface the headline metric ("organizer fixes per hour") fed
-  by the activity log, and add a demo-reset control so the signature flow can be
-  re-run live without re-seeding. Then a short written case study for the
-  portfolio.
+- Phase 3c — DONE: the headline metric and a demo reset. "Fixes / hr" now leads
+  the Needs You masthead (green), the north-star metric made visible. It is a
+  store value (state.fixes) that starts at a believable mid-day baseline
+  (PRIOR_FIXES = 9 over the 0.8 hr since the 1:30 PM shift start, so it reads ~11
+  on load) and increments on every organizer fix: resolveFlag (+1, manual or
+  from the radar) and applyPlan (+1, an approved copilot plan). fixesPerHour()
+  in lib/data.ts divides by hours on shift (nowMin is frozen by the tick, so the
+  denominator is stable). The demo reset (store.resetDemo + a two-click "Reset
+  demo" control in the sidebar foot, organizer-only) restores the seed
+  tournament to every Supabase row via the proven update path, so the signature
+  flows can be re-run live without the seed script; Realtime syncs the player
+  phone. Build, typecheck, lint clean.
+- Phase 3d — NEXT: a short written case study for the portfolio (problem, who
+  it's for, the "operate by exception" thesis, the one-action-everything-updates
+  moment, the architecture) plus any final live polish.
 
 ## Routes
 
@@ -152,6 +163,14 @@ others); /player and /login stay public.
   Supabase SQL editor. Safe to re-run (drops first).
 - `scripts/seed.ts` — writes lib/data.ts into Supabase using the service-role
   key (bypasses RLS). Run with `npm run seed`.
+- `lib/data.ts` also holds the headline-metric helpers: SHIFT_START_MIN,
+  PRIOR_FIXES, and fixesPerHour(fixes, nowMin). state.fixes is the running count.
+- `lib/store.ts` — resolveFlag and applyPlan bump state.fixes; resetDemo()
+  restores makeInitial() to every Supabase row (organizer-only, RLS-gated) and
+  logs a "demo_reset" activity entry.
+- `components/Sidebar.tsx` — the new "Delay radar" nav item plus the two-click
+  "Reset demo" control in the foot (only shown to the signed-in organizer).
+- `components/FlagsView.tsx` — the Needs You masthead now leads with Fixes / hr.
 - `lib/radar.ts` — the delay radar's math, a pure read-only function over the
   store. computeRadar(state) returns the over-plan matches ranked worst-first
   (each with overMin, projected finish/free time, severity, and the downstream
@@ -289,3 +308,12 @@ others); /player and /login stay public.
   over, free at 2:32, pushing the 2:30 MS Final by 2 min. One lint fix: derived
   the selected radar item during render instead of syncing it in an effect
   (react-hooks/set-state-in-effect). Build, typecheck, lint clean.
+- 2026-06-15: Phase 3b committed and pushed (commit b099941). Then Phase 3c —
+  the headline metric and a demo reset. Added state.fixes + fixesPerHour() and
+  surfaced "Fixes / hr" as the lead stat on the Needs You masthead; it starts at
+  a believable baseline (PRIOR_FIXES over the shift so far, ~11/hr) and climbs as
+  flags are cleared and plans approved. Added store.resetDemo (writes the seed
+  to every row through the organizer write path, logs a demo_reset activity
+  entry) and a two-click "Reset demo" control in the sidebar foot, shown only to
+  the signed-in organizer. This replaces "run npm run seed" for re-running the
+  demo live. Build, typecheck, lint clean.

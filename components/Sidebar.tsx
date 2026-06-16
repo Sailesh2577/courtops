@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
@@ -38,11 +39,29 @@ export function Sidebar({
   const flags = useStore((s) => s.flags);
   const user = useStore((s) => s.user);
   const signOut = useStore((s) => s.signOut);
+  const resetDemo = useStore((s) => s.resetDemo);
   const openCount = flags.filter((f) => !f.resolved).length;
   const delayActive = !flags.find((f) => f.id === "f2")?.resolved;
 
   // Prefer the configured display name; fall back to the part before the @.
   const orgName = DEMO_ORG.name || user?.email?.split("@")[0] || "Organizer";
+
+  // The reset is a two-click confirm so it can't fire by accident: the first
+  // click arms it for a few seconds, the second runs it.
+  const [armed, setArmed] = useState(false);
+  const armTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleReset() {
+    if (!armed) {
+      setArmed(true);
+      if (armTimer.current) clearTimeout(armTimer.current);
+      armTimer.current = setTimeout(() => setArmed(false), 3000);
+      return;
+    }
+    if (armTimer.current) clearTimeout(armTimer.current);
+    setArmed(false);
+    void resetDemo();
+  }
 
   async function handleSignOut() {
     await signOut();
@@ -88,6 +107,17 @@ export function Sidebar({
           <Icon name={theme === "light" ? "moon" : "sun"} size={16} />
           {theme === "light" ? "Dark mode" : "Light mode"}
         </button>
+
+        {user && (
+          <button
+            className={"demo-reset" + (armed ? " is-armed" : "")}
+            onClick={handleReset}
+            aria-label="Reset the demo to the seed tournament"
+          >
+            <Icon name="refresh" size={15} />
+            {armed ? "Click again to confirm" : "Reset demo"}
+          </button>
+        )}
 
         <div className="event-card">
           <div className="event-card-name">{EVENT.name}</div>

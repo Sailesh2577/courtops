@@ -230,6 +230,30 @@ a {
   background: var(--side-hover);
   color: var(--side-ink);
 }
+.demo-reset {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 11px;
+  border: 1px solid var(--side-border);
+  border-radius: var(--r1);
+  background: transparent;
+  color: var(--side-ink-2);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.demo-reset:hover {
+  background: var(--side-hover);
+  color: var(--side-ink);
+}
+.demo-reset.is-armed {
+  border-color: var(--alert);
+  color: var(--alert);
+}
 .event-card {
   padding: 11px 13px;
   border-radius: var(--r2);
@@ -784,6 +808,9 @@ a {
 }
 .nf-stat-v.red {
   color: var(--alert);
+}
+.nf-stat-v.accent {
+  color: var(--accent);
 }
 
 /* two-pane: ranked index on the left, spec-sheet detail on the right */

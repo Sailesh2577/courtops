@@ -252,6 +252,19 @@ function mkFlags(): Flag[] {
 export const SLOTS = ["1:30", "2:00", "2:30", "3:00", "3:30", "4:00"];
 export const SLOT_START = 13 * 60 + 30;
 
+// ── headline metric: organizer fixes per hour ────────────────────────────────
+// The organizer's shift starts with the first slot (1:30 PM). PRIOR_FIXES is the
+// run of fixes already handled this morning before the snapshot time, so the
+// metric reads as a believable mid-day pace on first load and climbs as the
+// organizer clears more. fixesPerHour divides today's fixes by hours on shift.
+export const SHIFT_START_MIN = SLOT_START;
+export const PRIOR_FIXES = 9;
+
+export function fixesPerHour(fixes: number, nowMin: number): number {
+  const hours = Math.max(0.25, (nowMin - SHIFT_START_MIN) / 60);
+  return Math.round(fixes / hours);
+}
+
 export type BlockState = "done" | "live" | "ready" | "planned";
 
 export type Block = {
@@ -327,6 +340,7 @@ export type CourtOpsState = {
   blocks: Block[];
   scheduleGenerated: boolean;
   estIdle: { before: number; after: number };
+  fixes: number; // running count of organizer fixes today (feeds fixes/hour)
   toasts: Toast[];
 };
 
@@ -339,6 +353,7 @@ export function makeInitial(): CourtOpsState {
     blocks: mkBlocks(),
     scheduleGenerated: true,
     estIdle: { before: 92, after: 54 },
+    fixes: PRIOR_FIXES,
     toasts: [],
   };
 }
