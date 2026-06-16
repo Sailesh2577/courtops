@@ -20,8 +20,9 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: "Needs you", href: "/needs-you", icon: "flag", badge: true },
   { label: "Court board", href: "/board", icon: "grid" },
+  { label: "Delay radar", href: "/radar", icon: "signal", dot: true },
   { label: "Schedule", href: "/schedule", icon: "calendar" },
-  { label: "Reschedule", href: "/reschedule", icon: "refresh", dot: true },
+  { label: "Reschedule", href: "/reschedule", icon: "refresh" },
   { label: "Player view", href: "/player", icon: "player" },
 ];
 

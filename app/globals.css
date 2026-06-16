@@ -1165,6 +1165,199 @@ a {
   gap: 12px;
   color: var(--ink-3);
 }
+
+/* ── delay radar (reuses .nf-band masthead + .nf-row index) ──────────────── */
+/* metric strip in the detail pane */
+.rd-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--border);
+  margin: 18px 0 4px;
+}
+.rd-metric {
+  padding: 12px 14px;
+  border-left: 1px solid var(--border);
+}
+.rd-metric:first-child {
+  border-left: 0;
+}
+.rd-metric-l {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rd-metric-v {
+  display: block;
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-top: 8px;
+}
+.rd-metric-v.red {
+  color: var(--alert);
+}
+
+/* the downstream cascade */
+.rd-chain {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+.rd-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid transparent;
+  padding-left: 13px;
+}
+.rd-link.is-risk {
+  border-left-color: var(--alert);
+}
+.rd-link-main {
+  min-width: 0;
+}
+.rd-link-label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.rd-link-pair {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-link-time {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-shrink: 0;
+}
+.rd-link-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.rd-push {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+.rd-push--ok {
+  background: var(--surface-3);
+  color: var(--ink-2);
+}
+.rd-push--risk {
+  background: var(--alert);
+  color: #fff;
+}
+
+/* the "rebalanced" confirmation after the fix is applied */
+.rd-fixed {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+}
+.rd-fixed-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
+}
+.rd-fixed-t {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.rd-fixed-s {
+  font-size: 13px;
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+
+.rd-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 18px;
+  padding: 13px 15px;
+  border: 1px dashed var(--border);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.rd-hint kbd {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+/* on-track section rows (calm, not interactive) */
+.rd-ontrack {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 16px 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rd-ontrack-court {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+}
+.rd-ontrack-body {
+  min-width: 0;
+}
+.rd-ontrack-h {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.rd-ontrack-pair {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rd-ontrack-rem {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
 @keyframes nfIn {
   from {
     opacity: 0;

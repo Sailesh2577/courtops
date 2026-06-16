@@ -4,7 +4,7 @@ A living log of what this project is, the decisions we have made, and where we
 are. Update this whenever something meaningful changes so a new chat can read it
 and pick up quickly. CLAUDE.md points here.
 
-Last updated: 2026-06-15 (Phase 3a done: operator copilot, real Gemini)
+Last updated: 2026-06-15 (Phase 3b done: predictive delay radar)
 
 ## What CourtOps is
 
@@ -84,15 +84,33 @@ moment that shows "one action, everything updates."
   writes anything itself. Real Gemini, server-side only (GEMINI_API_KEY, no
   NEXT_PUBLIC). Verified end to end against the live API. Build, typecheck, lint
   clean.
-- Phase 3b — NEXT: predictive delay radar (which live matches are running over
-  plan and what they push downstream). The seed already supports it (m1 is 16
-  min over plan; the delayActive/f2 hook exists).
+- Phase 3b — DONE: predictive delay radar, its own sidebar route (/radar, the
+  "signal" icon). A pure function (lib/radar.ts) reads the live matches plus the
+  planned schedule blocks and works out which courts are over plan, how far
+  behind, when each will realistically finish (finish + a 6 min turnover), and
+  what each pushes downstream (the queued blocks on that court, with planned vs
+  projected start and the minutes pushed). RadarView renders it in the same
+  Swiss grid idiom as Needs You: stat-band masthead (over plan / most behind /
+  at risk), a numbered ranked index of over-plan courts plus a calm "On track"
+  section for the rest, and a spec-sheet detail pane with a metric strip and the
+  downstream cascade. The detail offers the same fix the decision feed knows
+  about: if a matching unresolved "running behind" flag exists (f2 for Court 1),
+  an "Apply fix & notify" button calls the store's resolveFlag, so one action
+  still updates the board, schedule, and player phone. With the seed, Court 1 is
+  16 min over, projected free at 2:32, which pushes the 2:30 MS Final by 2 min
+  (honest numbers, not dramatized). The delay ping (the sidebar dot) moved from
+  Reschedule to the new Radar item. Build, typecheck, lint clean.
+- Phase 3c — NEXT: surface the headline metric ("organizer fixes per hour") fed
+  by the activity log, and add a demo-reset control so the signature flow can be
+  re-run live without re-seeding. Then a short written case study for the
+  portfolio.
 
 ## Routes
 
 `/` redirects to `/needs-you`. Screens: `/needs-you` (home), `/board`,
-`/schedule`, `/reschedule`, `/player`. All five are now real and live off the
-shared store.
+`/radar` (delay radar), `/schedule`, `/reschedule`, `/player`. All six are real
+and live off the shared store. /radar is an organizer surface (gated like the
+others); /player and /login stay public.
 
 ## Where the code lives
 
@@ -134,7 +152,16 @@ shared store.
   Supabase SQL editor. Safe to re-run (drops first).
 - `scripts/seed.ts` — writes lib/data.ts into Supabase using the service-role
   key (bypasses RLS). Run with `npm run seed`.
-- `components/{Board,Flags,Player,Schedule,Reschedule}View.tsx` — the five
+- `lib/radar.ts` — the delay radar's math, a pure read-only function over the
+  store. computeRadar(state) returns the over-plan matches ranked worst-first
+  (each with overMin, projected finish/free time, severity, and the downstream
+  blocks it pushes), plus the on-track live matches and the band totals. Never
+  mutates; the view renders it and the fix reuses resolveFlag.
+- `components/RadarView.tsx` — the /radar screen (Swiss grid idiom). Stat-band
+  masthead, ranked index + "On track" section, spec-sheet detail with the
+  metric strip and downstream cascade, and the "Apply fix & notify" button that
+  calls resolveFlag on the linked flag.
+- `components/{Board,Flags,Radar,Player,Schedule,Reschedule}View.tsx` — the six
   screens as client components. The route `page.tsx` files just render them.
 - `components/AppShell.tsx` — owns the once-a-second tick interval, the theme,
   calls `init()` once on mount, gates organizer routes (redirects signed-out
@@ -248,3 +275,17 @@ shared store.
   courtId / message body blank (those steps were getting dropped). Verified end
   to end against the live API: "Court 5 is open, who goes on?" returns assign +
   notify steps with all fields populated. Build, typecheck, lint clean.
+- 2026-06-15: Phase 3a committed and pushed (commit dd2108b). Then Phase 3b —
+  predictive delay radar as its own /radar route (user picked a dedicated route
+  over a Needs You band or a board overlay). Added lib/radar.ts (pure
+  computeRadar over matches + blocks: over-plan ranking, projected finish/free,
+  downstream cascade with per-block push minutes), components/RadarView.tsx (the
+  Swiss-grid screen), and app/radar/page.tsx. Sidebar gained the "Delay radar"
+  item (signal icon) and the delay ping (dot) moved there from Reschedule. The
+  detail pane reuses resolveFlag to apply the matching "running behind" fix, so
+  the radar stays in the "AI suggests, a person decides" model and one action
+  updates every surface. Projection model is deliberately honest: a 6 min
+  turnover, a tail scaled to the overrun; with the seed Court 1 reads 16 min
+  over, free at 2:32, pushing the 2:30 MS Final by 2 min. One lint fix: derived
+  the selected radar item during render instead of syncing it in an effect
+  (react-hooks/set-state-in-effect). Build, typecheck, lint clean.
