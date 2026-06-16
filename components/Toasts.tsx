@@ -4,8 +4,7 @@ import { useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { Icon } from "./Icon";
 
-// Bottom-right toast stack. Auto-dismisses the latest toast after 4200ms
-// (per the design handoff).
+// Bottom-right toast stack. Auto-dismisses the latest toast after 4200ms.
 export function Toasts() {
   const toasts = useStore((s) => s.toasts);
   const dismissToast = useStore((s) => s.dismissToast);

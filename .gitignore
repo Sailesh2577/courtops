@@ -31,6 +31,9 @@
 # throwaway HTML design mockups, not part of the app
 /prototypes/
 
+# local working log, not part of the public project
+/PROGRESS.md
+
 # debug
 npm-debug.log*
 yarn-debug.log*

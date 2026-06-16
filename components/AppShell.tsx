@@ -27,6 +27,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // The login screen and the player phone are open to everyone; every other
   // screen is an organizer surface and needs a signed-in session.
   const isLogin = pathname === "/login" || pathname.startsWith("/login/");
+  // The landing page and login both stand alone, with no organizer chrome.
+  const standalone = isLogin || pathname === "/";
   const gated = !isPublicRoute(pathname);
 
   // Load the tournament from Supabase and restore any session once on mount.
@@ -71,8 +73,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     });
   }
 
-  // The login screen stands alone, with no organizer chrome around it.
-  if (isLogin) {
+  // The landing and login screens stand alone, with no organizer chrome.
+  if (standalone) {
     return (
       <>
         {children}

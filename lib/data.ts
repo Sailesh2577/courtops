@@ -1,8 +1,7 @@
-// data.ts — CourtOps mock tournament + types.
+// data.ts: the CourtOps tournament types, helpers, and seed state.
 // One source of truth shared by every screen. Resolving a flag mutates the
 // matches/courts/blocks here, and the board, schedule, and player view all
-// re-render off the same state. Ported from the design handoff's data.jsx and
-// personalized to the Nebraska Open with 9 courts.
+// re-render off the same state. Seeded as the Nebraska Open with 9 courts.
 
 import type { IconName } from "@/components/Icon";
 import type { StatusKey } from "@/components/ui";

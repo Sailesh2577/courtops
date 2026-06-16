@@ -2,13 +2,13 @@
 
 // Organizer sign-in. CourtOps has two surfaces: the organizer dashboard (which
 // writes the tournament) and the player phone (read only). Only the organizer
-// authenticates; players never sign in. This is a portfolio demo with one
-// seeded account, so the form pre-fills the demo credentials and a recruiter
-// opening the live link can sign in with one click.
+// authenticates; players never sign in. The form pre-fills the demo credentials
+// so the live link can be explored in one click.
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/Icon";
+import { LogoMark } from "@/components/Logo";
 import { useStore } from "@/lib/store";
 import { DEMO_ORG } from "@/lib/auth";
 
@@ -46,7 +46,7 @@ export default function LoginPage() {
       <div className="auth-card">
         <div className="auth-brand">
           <span className="auth-mark">
-            <Icon name="shuttle" size={20} />
+            <LogoMark size={19} />
           </span>
           <span className="auth-brand-name">CourtOps</span>
         </div>

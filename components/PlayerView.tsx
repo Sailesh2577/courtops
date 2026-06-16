@@ -3,7 +3,7 @@
 // Player phone view — "my next match" as the player sees it on their phone.
 // It reads the same store as the organizer screens, so the instant Aanya is
 // sent to Court 3 (from "Needs you" or the board) this screen flips to "You're
-// up now" and flashes. Ported from the design handoff's player.jsx.
+// up now" and flashes.
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { Avatar } from "./ui";

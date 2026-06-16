@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon, type IconName } from "./Icon";
+import { LogoMark } from "./Logo";
 import { Avatar } from "./ui";
 import { useStore } from "@/lib/store";
 import { EVENT } from "@/lib/data";
@@ -17,7 +18,7 @@ type NavItem = {
   dot?: boolean; // shows the Court-1 delay ping while it is unresolved
 };
 
-// Order & icons per the design handoff (02-components.md §Sidebar).
+// The six primary surfaces, in priority order.
 const NAV: NavItem[] = [
   { label: "Needs you", href: "/needs-you", icon: "flag", badge: true },
   { label: "Court board", href: "/board", icon: "grid" },
@@ -72,7 +73,7 @@ export function Sidebar({
     <aside className="side">
       <div className="brand">
         <span className="brand-mark">
-          <Icon name="shuttle" size={20} />
+          <LogoMark size={20} />
         </span>
         <span className="brand-name">CourtOps</span>
       </div>

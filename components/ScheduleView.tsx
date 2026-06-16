@@ -1,10 +1,9 @@
 "use client";
 
-// Schedule builder — the imported draw placed on courts and times. The Rohan
+// Schedule builder: the imported draw placed on courts and times. The Rohan
 // back-to-back conflict (flag f3) is highlighted; clicking it opens the fix
-// that, when applied, moves his doubles block in the shared store. Ported from
-// the design handoff's schedule.jsx and generalized from 6 to the event's
-// court count.
+// that, when applied, moves his doubles block in the shared store. Sized to
+// the event's court count.
 import { useState } from "react";
 import { Icon } from "./Icon";
 import { useStore } from "@/lib/store";

@@ -27,10 +27,10 @@ import {
 } from "./supabaseRows";
 
 // The single source of truth for the whole tournament. Every screen reads from
-// here. In Phase 2 the data lives in Supabase: init() signs in, loads the live
-// tables, and subscribes to Realtime so a change made on one device shows up on
-// another. Resolving a flag updates the store optimistically and writes the
-// changed rows back, which Realtime then broadcasts to every other client.
+// here. The data lives in Supabase: init() signs in, loads the live tables, and
+// subscribes to Realtime so a change made on one device shows up on another.
+// Resolving a flag updates the store optimistically and writes the changed rows
+// back, which Realtime then broadcasts to every other client.
 //
 // The per-second timer tick stays local and cosmetic: we never write it, so it
 // never causes a write storm and the demo numbers stay stable across devices.

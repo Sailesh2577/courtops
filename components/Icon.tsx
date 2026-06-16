@@ -1,5 +1,4 @@
-// Icon — maps the prototype's icon names to lucide-react glyphs (per the
-// design handoff's recommended Lucide equivalents), plus a custom badminton
+// Icon: maps named icons to lucide-react glyphs, plus a custom badminton
 // "shuttle" brand mark that Lucide doesn't ship. Stroke defaults to 1.7.
 import {
   Flag,
@@ -97,7 +96,7 @@ export function Icon({
   style,
 }: IconProps) {
   if (name === "shuttle") {
-    // Custom badminton-shuttle mark (path from the prototype's icon set).
+    // Custom badminton-shuttle brand mark (not shipped by Lucide).
     return (
       <svg
         width={size}

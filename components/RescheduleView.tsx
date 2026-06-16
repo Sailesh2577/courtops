@@ -3,7 +3,7 @@
 // Reschedule — when the day drifts from the plan, CourtOps replans the rest and
 // the organizer confirms. Driven by flag f2 (Court 1 running behind); applying
 // it resolves f2 in the shared store, which also clears the sidebar ping and
-// the "Needs you" row. Ported from the design handoff's reschedule.jsx.
+// the "Needs you" row.
 import { useState } from "react";
 import { Icon } from "./Icon";
 import { useStore } from "@/lib/store";
